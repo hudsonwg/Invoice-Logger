@@ -36,7 +36,6 @@ class Product:
     imageList = list()
     handle = ""
 def create_shopify_session():
-
     shopify.Session.setup(api_key=os.environ['APIKEY'], secret=os.environ['SECRET'])
     shop_url = "invoiceblastfinal.myshopify.com"
     access_token = os.environ['ACCESSTOKEN']
@@ -272,6 +271,7 @@ def PRODUCT_TO_SHOPIFY_SESSION(product):
     new_product.tags = product.productTags
     new_product.vendor = "RVCA"
     new_product.collections = product.productType
+    new_product.product_type = product.productType
 
     #image handler
     newImageArray = []
@@ -281,6 +281,11 @@ def PRODUCT_TO_SHOPIFY_SESSION(product):
         count += 1
     new_product.images = newImageArray
     #image handling complete
+
+    ### THIS BIT IS UNDER CONSTRUCTION LOGIC NOT WORKING
+    new_product.options = [{"name": "Size", "values": product.sizeRun}]
+    new_product.add_variant({"title": "v" + str(0 + 1), "option1": product.sizeRun[0], "price": product.salePrice, "barcode": product.barCodeArray[0], "sku": product.SKU, "taxable": "true", "inventory_management": "shopify", "cost": (product.salePrice), "position": 0+1})
+    ###CONSTRUCTION OVER
 
     success = new_product.save()
 def RUN_BLASTER(file, writeFile):
@@ -314,7 +319,7 @@ RUN_BLASTER(filepath, 'importFile.csv')
 #1 store api information in .env files for git pushes
 #2 configure variants in product to shopify session
 #3 adapt system to make it versatile (i.e. take in arguments for what type of brand/invoice etc rather than assuming RVCA
-#4 implement barebones UI with fileselect and home screen
+#4 implement simple UI with fileselect and home screen
 #5 support for other brands
 #6 optimization/ streamlined error handling/move to map based data transfer for invoice metadata
 
