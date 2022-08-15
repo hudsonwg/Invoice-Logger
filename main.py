@@ -17,7 +17,6 @@ from tkinter import filedialog
 from tkinter.ttk import Progressbar
 
 
-
 class Product:
     productName = "null"
     productDescription = "null"
@@ -283,8 +282,14 @@ def PRODUCT_TO_SHOPIFY_SESSION(product):
     #image handling complete
 
     ### THIS BIT IS UNDER CONSTRUCTION LOGIC NOT WORKING
+
     new_product.options = [{"name": "Size", "values": product.sizeRun}]
-    new_product.add_variant({"title": "v" + str(0 + 1), "option1": product.sizeRun[0], "price": product.salePrice, "barcode": product.barCodeArray[0], "sku": product.SKU, "taxable": "true", "inventory_management": "shopify", "cost": (product.salePrice), "position": 0+1})
+    productVariants = []
+    count = 0
+    for size in product.sizeRun:
+        productVariants.append(shopify.Variant({"title": "v" + str(0 + 1), "option1": product.sizeRun[count], "price": product.salePrice, "barcode": product.barCodeArray[count], "sku": product.SKU, "taxable": "true", "inventory_management": "shopify", "cost": (product.salePrice), "position": count + 1}))
+        count += 1
+    new_product.variants = productVariants
     ###CONSTRUCTION OVER
 
     success = new_product.save()
