@@ -2,7 +2,6 @@ import binascii
 import os
 import re
 import requests
-
 import json
 #import sys
 import shopify
@@ -137,6 +136,7 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     name = name.strip()
     price = soup.find(class_="salesprice").get_text(separator=" ")
     price = price.strip()
+
     returnProduct.productCost = price
     ##TAG FINDER BELOW
     site = requests.get(link).text
@@ -150,7 +150,7 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     for item in tagArray:
         taglist = taglist + item + ", "
     taglist = taglist[:-2]
-    productType1 = "accessories"
+    productType1 = "clothing"
     # returnproduct.tags = taglist
     if (taglist.find("short") != -1 and taglist.find("shirt") == -1):
         taglist = taglist + "shorts, RVCA shorts"
@@ -161,14 +161,15 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     ##TAG FINDING COMPLETE
 
     try:
-        color = soup.find(class_="attrTitle").get_text(separator=" ")
-        color = color.replace("Color:", "")
-        color = color.strip()
+
+        color = (soup.find("meta", {"name": "product:color"}))
+        color = color["content"].capitalize()
         returnProduct.productName = name + " - " + color
         returnProduct.handle = name + " - " + color
     except:
         returnProduct.productName = name
         returnProduct.handle = name.replace(" ","-")
+        print("color not found")
 
 
     desc = soup.find(class_="pdp-desc-long").get_text(separator=" ")
@@ -228,9 +229,7 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     returnProduct.sizeRun = new_Size
     returnProduct.sizeQuantity = quantityList
     returnProduct.barCodeArray = new_UPC
-    returnProduct.productType = "null"
     returnProduct.productVendor = "RVCA"
-    returnProduct.collection = "null"
     returnProduct.channels = 0;
     returnProduct.status = "draft"
     returnProduct.imageList = sourceList
@@ -333,11 +332,15 @@ def RUN_BLASTER(file, writeFile):
         count += 1
     #print("invoice completed in " + str(round(float(time.time() - start_time), 2)) + " seconds runtime")
 
-filepath = "RVCA6.pdf"
+
+
+##BAREBONES FILE DIALOG UI _ _ _ _ _ TEMPORARY
+import tkinter as tk
+from tkinter import filedialog
+root = tk.Tk()
+root.withdraw()
+filepath = filedialog.askopenfilename()
 RUN_BLASTER(filepath, 'importFile.csv')
-
-
-
 
 
 ##OBJECTIVES##
