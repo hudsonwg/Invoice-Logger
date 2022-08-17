@@ -16,7 +16,6 @@ from tkinter import *
 from tkinter import filedialog
 from tkinter.ttk import Progressbar
 
-
 class Product:
     productName = "null"
     productDescription = "null"
@@ -282,16 +281,38 @@ def PRODUCT_TO_SHOPIFY_SESSION(product):
     #image handling complete
 
     ### THIS BIT IS UNDER CONSTRUCTION LOGIC NOT WORKING
-
     new_product.options = [{"name": "Size", "values": product.sizeRun}]
     productVariants = []
     count = 0
     for size in product.sizeRun:
-        productVariants.append(shopify.Variant({"title": "v" + str(0 + 1), "option1": product.sizeRun[count], "price": product.salePrice, "barcode": product.barCodeArray[count], "sku": product.SKU, "taxable": "true", "inventory_management": "shopify", "cost": (product.salePrice), "position": count + 1}))
+        newVariant = (shopify.Variant({"title": "v" + str(0 + 1), "option1": product.sizeRun[count], "price": product.salePrice, "barcode": product.barCodeArray[count], "sku": product.SKU, "taxable": "true", "inventory_management": "shopify", "cost": (product.salePrice), "inventory_quantity": product.sizeQuantity[count], "position": count + 1}))
+        productVariants.append(newVariant)
         count += 1
+    #THIS WORKS VERY IMPORTANT PLEASE DO NOT FORGET THIS
+    #print(requests.get("https://invoiceblastfinal.myshopify.com/admin/api/2022-07/products/7175551156407/variants/41342351802551.json", headers={'X-Shopify-Access-Token': os.environ['ACCESSTOKEN']}).text)
     new_product.variants = productVariants
-    ###CONSTRUCTION OVER
+    new_product.save()
+    count = 0
+    for size in product.sizeRun:
+        # find variant id
+        #find product ID
+        productID = str(new_product.attributes['id'])
+        variantID = str(new_product.variants[count].attributes['id'])
+        #print(productID)
+        #print(variantID)
+        queryURL = "https://invoiceblastfinal.myshopify.com/admin/api/2022-07/products/" + productID + "/variants/" + variantID + ".json"
+        response1 = (requests.get(queryURL, params="inventory_item_id", headers={'X-Shopify-Access-Token': os.environ['ACCESSTOKEN']}))
+        jsonData = json.loads(response1.text)
+        inventoryItemId = (str(jsonData["variant"]['inventory_item_id']))
+        # find location id
+        locationURL = "https://invoiceblastfinal.myshopify.com/admin/api/2022-07/inventory_levels.json?inventory_item_ids=" + inventoryItemId
+        response2 = (requests.get(locationURL, params="inventory_item_id", headers={'X-Shopify-Access-Token': os.environ['ACCESSTOKEN']}))
+        jsonData2 = json.loads(response2.text)
+        locationID = (str(jsonData2["inventory_levels"][0]["location_id"]))
 
+        postURL = "https://invoiceblastfinal.myshopify.com/admin/api/2022-07/inventory_levels/adjust.json"
+        requests.post(postURL, params={"location_id": locationID, "inventory_item_id": inventoryItemId, "available_adjustment": product.sizeQuantity[count]}, headers={'X-Shopify-Access-Token': os.environ['ACCESSTOKEN']}).text
+        count += 1
     success = new_product.save()
 def RUN_BLASTER(file, writeFile):
     print("running blaster")
