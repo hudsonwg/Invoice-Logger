@@ -1,6 +1,8 @@
 import binascii
 import os
 import re
+import sys
+from datetime import datetime
 import requests
 import json
 #import sys
@@ -45,6 +47,33 @@ def create_shopify_session():
     session = shopify.Session(shop_url, api_version)
     session = shopify.Session(shop_url, api_version, access_token)
     shopify.ShopifyResource.activate_session(session)
+def GENERATE_SESSION_TAG():
+    sessionTag = ""
+    month = datetime.now().month
+    monthArray = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    sessionTag = monthArray[month-1]
+    year = str(datetime.now().year)
+    sessionTag += year
+    return sessionTag
+def DETERMINE_INVOICE_TYPE(file):
+    invoiceType = "indeterminate"
+    try:
+        with pdfplumber.open(file) as pdf:
+            text = ""
+            count = 0;
+            while count < len(pdf.pages):
+                page = pdf.pages[count]
+                text += page.extract_text()
+                count += 1
+            if(text.count("RVCA") >= 2):
+                invoiceType = "RVCA"
+                #print("RVCA INVOICE")
+            if (text.count("Billabong") >= 2):
+                invoiceType = "BILLABONG"
+                #print("BILLABONG INVOICE")
+    except:
+        sys.exit("ERROR: NON PDF FILETYPE SELECTED")
+    return invoiceType
 def FIND_LENGTH(fileName):
     with pdfplumber.open(fileName) as pdf:
         text = ""
@@ -76,10 +105,7 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
         upcSIZEREGEX = re.compile(r'\d{12} \w{0,3} \w{0,3}')
         quantREGEX = re.compile(r'\d{1} [EA]')
         skuREGEX = re.compile(r'Subtotal')
-
-
         # print(newChunk)
-
         # create chunk of text by index and only search that chunk
         indexChunk = ""
         index = productIndex
@@ -95,10 +121,8 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
                 # print(line)
                 indexChunk += ("\n" + line)
                 foundLine = True
-
             if count != index and skuREGEX.findall(line) and foundLine == False:
                 count += 1
-
     #print(upcREGEX.findall(indexChunk))
     #print(quantREGEX.findall(indexChunk))
     upcSizeList = upcSIZEREGEX.findall(indexChunk)
@@ -106,15 +130,12 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
         #find alternative size run find method
         upcSizeList = upcREGEX.findall(indexChunk)
     quantityList = quantREGEX.findall(indexChunk)
-
     new_quantityList = []
     for index in quantityList:
         new_index = index[0]
         new_quantityList.append(new_index)
         #print(index)
     quantityList = new_quantityList
-
-
     new_UPC = []
     new_Size = []
     for index in upcSizeList:
@@ -122,13 +143,10 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
         Size = index[12:]
         new_UPC.append(UPC)
         new_Size.append(Size)
-
     #print(upcREGEX.findall(indexChunk)[0])
     link = "http://rvca.com/" + upcREGEX.findall(indexChunk)[0][0:12] + ".html"
     #print(link)
-
     ##site query stuff
-
     site = requests.get(link).text
     soup = BeautifulSoup(site, 'html.parser')
     # print(soup.prettify())
@@ -136,7 +154,6 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     name = name.strip()
     price = soup.find(class_="salesprice").get_text(separator=" ")
     price = price.strip()
-
     returnProduct.productCost = price
     ##TAG FINDER BELOW
     site = requests.get(link).text
@@ -159,9 +176,7 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
         taglist = taglist + ", tees, shirts, RVCA tees"
         productType1 = "shirts"
     ##TAG FINDING COMPLETE
-
     try:
-
         color = (soup.find("meta", {"name": "product:color"}))
         color = color["content"].capitalize()
         returnProduct.productName = name + " - " + color
@@ -170,8 +185,6 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
         returnProduct.productName = name
         returnProduct.handle = name.replace(" ","-")
         print("color not found")
-
-
     desc = soup.find(class_="pdp-desc-long").get_text(separator=" ")
     desc = desc.strip()
     returnProduct.productDescription = desc
@@ -204,24 +217,8 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     returnProduct.productType = productType1
     returnProduct.sizeRun = new_Size
     returnProduct.imageList = sourceList
-    #print(name)
-    #print(color)
-    #print(price)
-    #print(sku)
-    #print(desc)
-    #print(quantityList)
-    #print(new_Size)
-    #print(new_UPC)
-    #print(sourceList)
-    #print(status)
-    #print(brand)
-    #print(tags)
-    #print((float(price[1:]) / 2))
-
-
     if new_Size == ['   ']:
         new_Size[0] = ('OS')
-
     returnProduct.productDescription = desc
     returnProduct.salePrice = price
     returnProduct.productCost = float(price[1:]) / 2
@@ -236,6 +233,15 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     #print("File Loaded!")
     #print(taglist)
     return returnProduct
+def BILLABONG_TO_PRODUCT(fileName, productIndex):
+    print("under construction")
+def BRAND_TO_PRODUCT(filePath, index, type):
+    if(type == "BILLABONG"):
+        sys.exit("ERROR: UNSUPPORTED INVOICE FORMAT")
+    if(type == "RVCA"):
+        return RVCA_TO_PRODUCT(filePath, index)
+    else:
+        sys.exit("ERROR: UNSUPPORTED INVOICE FORMAT")
 def PRODUCT_TO_CSV(product, file, first):
     #print("writing to csv...")
     while len(product.imageList) < len(product.barCodeArray):
@@ -261,11 +267,12 @@ def PRODUCT_TO_CSV(product, file, first):
     #print("product blasted!")
 def PRODUCT_TO_SHOPIFY_SESSION(product):
     #print("adding directly to store")
+    sessionTag = ", " + GENERATE_SESSION_TAG()
     create_shopify_session()
     new_product = shopify.Product()
     new_product.title = product.productName
     new_product.body_html = product.productDescription
-    new_product.tags = product.productTags
+    new_product.tags = product.productTags + sessionTag
     new_product.vendor = "RVCA"
     new_product.collections = product.productType
     new_product.product_type = product.productType
@@ -318,9 +325,9 @@ def RUN_BLASTER(file, writeFile):
     count = 0;
     percent = 0;
     total = FIND_LENGTH(file)
-    inc = 100/total
+    invoiceType = DETERMINE_INVOICE_TYPE(file)
     while count < FIND_LENGTH(file):
-        sampleProduct = RVCA_TO_PRODUCT(file, count)
+        sampleProduct = BRAND_TO_PRODUCT(file, count, invoiceType)
         if count == 0:
             #PRODUCT_TO_CSV(sampleProduct, writeFile, True)
             PRODUCT_TO_SHOPIFY_SESSION(sampleProduct)
@@ -340,6 +347,8 @@ from tkinter import filedialog
 root = tk.Tk()
 root.withdraw()
 filepath = filedialog.askopenfilename()
+GENERATE_SESSION_TAG()
+DETERMINE_INVOICE_TYPE(filepath)
 RUN_BLASTER(filepath, 'importFile.csv')
 
 
