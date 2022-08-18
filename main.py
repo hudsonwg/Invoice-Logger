@@ -234,7 +234,7 @@ def RVCA_TO_PRODUCT(fileName, productIndex):
     #print(taglist)
     return returnProduct
 def BILLABONG_TO_PRODUCT(fileName, productIndex):
-    print("under construction")
+    print("still working")
 def BRAND_TO_PRODUCT(filePath, index, type):
     if(type == "BILLABONG"):
         sys.exit("ERROR: UNSUPPORTED INVOICE FORMAT")
@@ -338,20 +338,21 @@ def RUN_BLASTER(file, writeFile):
             print("product " + str(count + 1) + " loaded")
         count += 1
     #print("invoice completed in " + str(round(float(time.time() - start_time), 2)) + " seconds runtime")
+def RUN_NORMALMODE():
+    ##BAREBONES FILE DIALOG UI _ _ _ _ _ TEMPORARY
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    filepath = filedialog.askopenfilename()
+    GENERATE_SESSION_TAG()
+    DETERMINE_INVOICE_TYPE(filepath)
+    RUN_BLASTER(filepath, 'importFile.csv')
+def RUN_DEBUGMODE():
+    print("RUNNING SYSTEM IN DEBUG MODE")
 
 
-
-##BAREBONES FILE DIALOG UI _ _ _ _ _ TEMPORARY
-import tkinter as tk
-from tkinter import filedialog
-root = tk.Tk()
-root.withdraw()
-filepath = filedialog.askopenfilename()
-GENERATE_SESSION_TAG()
-DETERMINE_INVOICE_TYPE(filepath)
-RUN_BLASTER(filepath, 'importFile.csv')
-
-
+RUN_NORMALMODE()
 ##OBJECTIVES##
 
 #1 store api information in .env files for git pushes
